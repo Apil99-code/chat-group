@@ -29,52 +29,56 @@ export const useExpenseStore = create((set, get) => ({
 
   // Add Expense
   addExpense: async (expenseData) => {
+    set({ isExpenseSubmitting: true });
     try {
-      const res = await axiosInstance.post("/expense", expenseData); // Ensure correct data format
-      set((state) => ({ expenses: [...state.expenses, res.data.expense] })); // Use `res.data.expense`
+      const res = await axiosInstance.post("/expense", expenseData);
+      set((state) => ({ 
+        expenses: [...state.expenses, res.data],
+        isExpenseSubmitting: false 
+      }));
       toast.success("Expense added successfully");
+      return res.data;
     } catch (error) {
-      console.error("Error in addExpense:", error);
-      toast.error("Failed to add expense");
-      throw new Error("Failed to add expense");
+      set({ isExpenseSubmitting: false });
+      toast.error(error.response?.data?.message || "Failed to add expense");
+      throw error;
     }
   },
 
   // Update Expense
   updateExpense: async (id, updatedExpense) => {
-    set({ isExpenseSubmitting: true, error: null });
+    set({ isExpenseSubmitting: true });
     try {
       const res = await axiosInstance.put(`/expense/${id}`, updatedExpense);
       set((state) => ({
-        expenses: state.expenses.map((exp) => (exp._id === id ? res.data : exp)),
+        expenses: state.expenses.map((exp) => 
+          exp._id === id ? res.data : exp
+        ),
         isExpenseSubmitting: false
       }));
       toast.success("Expense updated successfully");
       return res.data;
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Failed to update expense";
-      set({ 
-        error: errorMessage,
-        isExpenseSubmitting: false
-      });
-      toast.error(errorMessage);
-      throw new Error(errorMessage);
+      set({ isExpenseSubmitting: false });
+      toast.error(error.response?.data?.message || "Failed to update expense");
+      throw error;
     }
   },
 
   // Delete Expense
   deleteExpense: async (id) => {
+    set({ isExpenseSubmitting: true });
     try {
       await axiosInstance.delete(`/expense/${id}`);
       set((state) => ({
-        expenses: state.expenses.filter((exp) => exp._id !== id)
+        expenses: state.expenses.filter((exp) => exp._id !== id),
+        selectedExpense: state.selectedExpense?._id === id ? null : state.selectedExpense
       }));
       toast.success("Expense deleted successfully");
     } catch (error) {
-      const errorMessage = error.response?.data?.message || "Failed to delete expense";
-      set({ error: errorMessage });
-      toast.error(errorMessage);
-      throw new Error(errorMessage);
+      set({ isExpenseSubmitting: false });
+      toast.error(error.response?.data?.message || "Failed to delete expense");
+      throw error;
     }
   },
 

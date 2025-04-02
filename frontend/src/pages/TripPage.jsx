@@ -17,9 +17,14 @@ import {
   Plane,
   Hotel,
   Utensils,
-  Trash2
+  Trash2,
+  Share2,
+  Edit2
 } from 'lucide-react';
 import { useTripStore } from '../store/useTripStore';
+import { useChatStore } from '../store/useChatStore';
+import { useGroupStore } from '../store/useGroupStore';
+import { toast } from 'react-hot-toast';
 
 // Fix for default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -35,13 +40,21 @@ const TripPage = () => {
     selectedTrip, 
     isTripsLoading, 
     isTripSubmitting,
+    showEditModal,
+    showShareModal,
     getTrips, 
     createTrip, 
     updateTrip, 
     deleteTrip,
+    shareTrip,
     setSelectedTrip,
-    clearSelectedTrip 
+    clearSelectedTrip,
+    toggleEditModal,
+    toggleShareModal
   } = useTripStore();
+
+  const { currentUser } = useChatStore();
+  const { groups } = useGroupStore();
 
   const [showNewTripModal, setShowNewTripModal] = useState(false);
   const [mapCenter, setMapCenter] = useState([20, 0]);
@@ -62,7 +75,14 @@ const TripPage = () => {
     image: '',
     activities: [],
     accommodation: '',
-    transportation: ''
+    transportation: '',
+    isPublic: false
+  });
+
+  const [shareForm, setShareForm] = useState({
+    sharedWith: [],
+    sharedGroups: [],
+    isPublic: false
   });
 
   useEffect(() => {
@@ -97,6 +117,28 @@ const TripPage = () => {
     return matchesStatus && matchesSearch;
   });
 
+  const handleLocationSearch = async (location) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`
+      );
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        setNewTripForm(prev => ({
+          ...prev,
+          coordinates: [parseFloat(lat), parseFloat(lon)]
+        }));
+        setMapCenter([parseFloat(lat), parseFloat(lon)]);
+        setMapZoom(12);
+      }
+    } catch (error) {
+      console.error('Error fetching location:', error);
+      toast.error('Failed to find location');
+    }
+  };
+
   const handleCreateTrip = async (e) => {
     e.preventDefault();
     try {
@@ -115,7 +157,8 @@ const TripPage = () => {
         image: '',
         activities: [],
         accommodation: '',
-        transportation: ''
+        transportation: '',
+        isPublic: false
       });
     } catch (error) {
       console.error('Failed to create trip:', error);
@@ -130,11 +173,42 @@ const TripPage = () => {
     }
   };
 
-  const handleUpdateTrip = async (tripId, updates) => {
+  const handleUpdateTrip = async (e) => {
+    e.preventDefault();
     try {
-      await updateTrip(tripId, updates);
+      await updateTrip(selectedTrip._id, newTripForm);
+      setNewTripForm({
+        title: '',
+        startDate: '',
+        endDate: '',
+        location: '',
+        coordinates: [0, 0],
+        members: 1,
+        budget: 0,
+        status: 'planning',
+        description: '',
+        image: '',
+        activities: [],
+        accommodation: '',
+        transportation: '',
+        isPublic: false
+      });
     } catch (error) {
       console.error('Failed to update trip:', error);
+    }
+  };
+
+  const handleShareTrip = async (e) => {
+    e.preventDefault();
+    try {
+      await shareTrip(selectedTrip._id, shareForm);
+      setShareForm({
+        sharedWith: [],
+        sharedGroups: [],
+        isPublic: false
+      });
+    } catch (error) {
+      console.error('Failed to share trip:', error);
     }
   };
 
@@ -206,48 +280,71 @@ const TripPage = () => {
                   filteredTrips.map((trip) => (
                     <div
                       key={trip._id}
-                      onClick={() => handleTripSelect(trip)}
-                      className={`card bg-base-100 shadow hover:shadow-lg cursor-pointer transition-all duration-300 ${
+                    onClick={() => handleTripSelect(trip)}
+                    className={`card bg-base-100 shadow hover:shadow-lg cursor-pointer transition-all duration-300 ${
                         selectedTrip?._id === trip._id ? 'ring-2 ring-primary' : ''
-                      }`}
-                    >
-                      <div className="card-body p-4">
-                        <div className="flex gap-4">
-                          <img
+                    }`}
+                  >
+                    <div className="card-body p-4">
+                      <div className="flex gap-4">
+                        <img
                             src={trip.image || 'https://via.placeholder.com/150'}
-                            alt={trip.title}
-                            className="w-24 h-24 rounded-lg object-cover"
-                          />
-                          <div className="flex-1">
+                          alt={trip.title}
+                          className="w-24 h-24 rounded-lg object-cover"
+                        />
+                        <div className="flex-1">
                             <div className="flex justify-between items-start">
-                              <h3 className="font-bold text-lg">{trip.title}</h3>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteTrip(trip._id);
-                                }}
-                                className="btn btn-ghost btn-sm text-error"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                          <h3 className="font-bold text-lg">{trip.title}</h3>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedTrip(trip);
+                                    toggleShareModal(true);
+                                  }}
+                                  className="btn btn-ghost btn-sm"
+                                >
+                                  <Share2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedTrip(trip);
+                                    setNewTripForm(trip);
+                                    toggleEditModal(true);
+                                  }}
+                                  className="btn btn-ghost btn-sm"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteTrip(trip._id);
+                                  }}
+                                  className="btn btn-ghost btn-sm text-error"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
-                            <p className="text-sm text-gray-600 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> {trip.location}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-2 mt-2">
-                              <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(trip.status)}`}>
-                                {trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
-                              </span>
-                              <span className="text-xs text-gray-500 flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {format(new Date(trip.startDate), 'MMM d')} -{' '}
-                                {format(new Date(trip.endDate), 'MMM d, yyyy')}
-                              </span>
-                            </div>
+                          <p className="text-sm text-gray-600 flex items-center gap-1">
+                            <MapPin className="w-3 h-3" /> {trip.location}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(trip.status)}`}>
+                              {trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
+                            </span>
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {format(new Date(trip.startDate), 'MMM d')} -{' '}
+                              {format(new Date(trip.endDate), 'MMM d, yyyy')}
+                            </span>
                           </div>
                         </div>
                       </div>
                     </div>
+                  </div>
                   ))
                 )}
               </div>
@@ -372,9 +469,21 @@ const TripPage = () => {
                   </div>
 
                   <div className="card-actions justify-end mt-6">
-                    <button className="btn btn-outline">Share Trip</button>
-                    <button className="btn btn-outline">Edit Trip</button>
-                    <button className="btn btn-primary">View Details</button>
+                    <button 
+                      className="btn btn-outline"
+                      onClick={() => toggleShareModal(true)}
+                    >
+                      Share Trip
+                    </button>
+                    <button 
+                      className="btn btn-outline"
+                      onClick={() => {
+                        setNewTripForm(selectedTrip);
+                        toggleEditModal(true);
+                      }}
+                    >
+                      Edit Trip
+                    </button>
                   </div>
                 </div>
               </div>
@@ -415,7 +524,175 @@ const TripPage = () => {
                   placeholder="Enter location" 
                   className="input input-bordered"
                   value={newTripForm.location}
-                  onChange={(e) => setNewTripForm({ ...newTripForm, location: e.target.value })}
+                  onChange={(e) => {
+                    setNewTripForm({ ...newTripForm, location: e.target.value });
+                    handleLocationSearch(e.target.value);
+                  }}
+                  required
+                />
+              </div>
+              
+              <div className="form-control">
+                <label className="label">Start Date</label>
+                <input 
+                  type="date" 
+                  className="input input-bordered"
+                  value={newTripForm.startDate}
+                  onChange={(e) => setNewTripForm({ ...newTripForm, startDate: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div className="form-control">
+                <label className="label">End Date</label>
+                <input 
+                  type="date" 
+                  className="input input-bordered"
+                  value={newTripForm.endDate}
+                  onChange={(e) => setNewTripForm({ ...newTripForm, endDate: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div className="form-control">
+                <label className="label">Budget</label>
+                <input 
+                  type="number" 
+                  placeholder="Enter budget" 
+                  className="input input-bordered"
+                  value={newTripForm.budget}
+                  onChange={(e) => setNewTripForm({ ...newTripForm, budget: Number(e.target.value) })}
+                  required
+                />
+              </div>
+              
+              <div className="form-control">
+                <label className="label">Number of Members</label>
+                <input 
+                  type="number" 
+                  placeholder="Enter number of members" 
+                  className="input input-bordered"
+                  value={newTripForm.members}
+                  onChange={(e) => setNewTripForm({ ...newTripForm, members: Number(e.target.value) })}
+                  required
+                />
+              </div>
+              
+              <div className="form-control md:col-span-2">
+                <label className="label">Description</label>
+                <textarea 
+                  className="textarea textarea-bordered h-24" 
+                  placeholder="Enter trip description"
+                  value={newTripForm.description}
+                  onChange={(e) => setNewTripForm({ ...newTripForm, description: e.target.value })}
+                ></textarea>
+              </div>
+
+              <div className="form-control md:col-span-2">
+                <label className="label">Activities (comma-separated)</label>
+                <input 
+                  type="text" 
+                  className="input input-bordered"
+                  placeholder="e.g. Hiking, Swimming, Sightseeing"
+                  value={newTripForm.activities.join(', ')}
+                  onChange={(e) => setNewTripForm({ 
+                    ...newTripForm, 
+                    activities: e.target.value.split(',').map(activity => activity.trim())
+                  })}
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label">Transportation</label>
+                <input 
+                  type="text" 
+                  className="input input-bordered"
+                  placeholder="e.g. Air France"
+                  value={newTripForm.transportation}
+                  onChange={(e) => setNewTripForm({ ...newTripForm, transportation: e.target.value })}
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label">Accommodation</label>
+                <input 
+                  type="text" 
+                  className="input input-bordered"
+                  placeholder="e.g. Hotel Name"
+                  value={newTripForm.accommodation}
+                  onChange={(e) => setNewTripForm({ ...newTripForm, accommodation: e.target.value })}
+                />
+            </div>
+
+              <div className="form-control">
+                <label className="label">Image URL</label>
+                <input 
+                  type="url" 
+                  className="input input-bordered"
+                  placeholder="Enter image URL"
+                  value={newTripForm.image}
+                  onChange={(e) => setNewTripForm({ ...newTripForm, image: e.target.value })}
+                />
+              </div>
+            </form>
+
+            <div className="modal-action">
+              <button className="btn" onClick={() => setShowNewTripModal(false)}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                onClick={handleCreateTrip}
+                className="btn btn-primary"
+                disabled={isTripSubmitting}
+              >
+                {isTripSubmitting ? (
+                  <span className="loading loading-spinner"></span>
+                ) : (
+                  'Create Trip'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Trip Modal */}
+      {showEditModal && selectedTrip && (
+        <div className="modal modal-open">
+          <div className="modal-box max-w-3xl">
+            <h3 className="font-bold text-lg">Edit Trip</h3>
+            <button
+              onClick={() => toggleEditModal(false)}
+              className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+            >
+              ✕
+            </button>
+            
+            <form onSubmit={handleUpdateTrip} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div className="form-control">
+                <label className="label">Trip Title</label>
+                <input 
+                  type="text" 
+                  placeholder="Enter trip title" 
+                  className="input input-bordered"
+                  value={newTripForm.title}
+                  onChange={(e) => setNewTripForm({ ...newTripForm, title: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div className="form-control">
+                <label className="label">Location</label>
+                <input 
+                  type="text" 
+                  placeholder="Enter location" 
+                  className="input input-bordered"
+                  value={newTripForm.location}
+                  onChange={(e) => {
+                    setNewTripForm({ ...newTripForm, location: e.target.value });
+                    handleLocationSearch(e.target.value);
+                  }}
                   required
                 />
               </div>
@@ -525,19 +802,111 @@ const TripPage = () => {
             </form>
 
             <div className="modal-action">
-              <button className="btn" onClick={() => setShowNewTripModal(false)}>
+              <button className="btn" onClick={() => toggleEditModal(false)}>
                 Cancel
               </button>
               <button
                 type="submit"
-                onClick={handleCreateTrip}
+                onClick={handleUpdateTrip}
                 className="btn btn-primary"
                 disabled={isTripSubmitting}
               >
                 {isTripSubmitting ? (
                   <span className="loading loading-spinner"></span>
                 ) : (
-                  'Create Trip'
+                  'Update Trip'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Trip Modal */}
+      {showShareModal && selectedTrip && (
+        <div className="modal modal-open">
+          <div className="modal-box max-w-3xl">
+            <h3 className="font-bold text-lg">Share Trip</h3>
+            <button
+              onClick={() => toggleShareModal(false)}
+              className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+            >
+              ✕
+            </button>
+            
+            <form onSubmit={handleShareTrip} className="space-y-4 mt-4">
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Share with Users</span>
+                </label>
+                <select
+                  multiple
+                  className="select select-bordered"
+                  value={shareForm.sharedWith}
+                  onChange={(e) => setShareForm({
+                    ...shareForm,
+                    sharedWith: Array.from(e.target.selectedOptions, option => option.value)
+                  })}
+                >
+                  {currentUser?.friends?.map(friend => (
+                    <option key={friend._id} value={friend._id}>
+                      {friend.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Share with Groups</span>
+                </label>
+                <select
+                  multiple
+                  className="select select-bordered"
+                  value={shareForm.sharedGroups}
+                  onChange={(e) => setShareForm({
+                    ...shareForm,
+                    sharedGroups: Array.from(e.target.selectedOptions, option => option.value)
+                  })}
+                >
+                  {groups.map(group => (
+                    <option key={group._id} value={group._id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-control">
+                <label className="label cursor-pointer">
+                  <span className="label-text">Make Public</span>
+                  <input
+                    type="checkbox"
+                    className="toggle"
+                    checked={shareForm.isPublic}
+                    onChange={(e) => setShareForm({
+                      ...shareForm,
+                      isPublic: e.target.checked
+                    })}
+                  />
+                </label>
+              </div>
+            </form>
+
+            <div className="modal-action">
+              <button className="btn" onClick={() => toggleShareModal(false)}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                onClick={handleShareTrip}
+                className="btn btn-primary"
+                disabled={isTripSubmitting}
+              >
+                {isTripSubmitting ? (
+                  <span className="loading loading-spinner"></span>
+                ) : (
+                  'Share Trip'
                 )}
               </button>
             </div>

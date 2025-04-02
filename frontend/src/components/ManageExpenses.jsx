@@ -35,8 +35,8 @@ const ManageExpenses = () => {
       const expenseData = {
         ...formData,
         amount: parseFloat(formData.amount),
-        groupId: selectedGroup._id, // Ensure groupId is sent
-        date: formData.date || new Date().toISOString(), // Default to current date if not provided
+        groupId: selectedGroup._id,
+        date: formData.date || new Date().toISOString(),
       };
 
       if (editingExpense) {
@@ -46,6 +46,10 @@ const ManageExpenses = () => {
         await addExpense(expenseData);
         toast.success("Expense added successfully");
       }
+      
+      // Refresh the expenses list
+      await getExpenses(selectedGroup._id);
+      
       setIsModalOpen(false);
       setEditingExpense(null);
       setFormData({
@@ -78,6 +82,8 @@ const ManageExpenses = () => {
     if (window.confirm('Are you sure you want to delete this expense?')) {
       try {
         await deleteExpense(expenseId);
+        // Refresh the expenses list
+        await getExpenses(selectedGroup._id);
         toast.success('Expense deleted successfully');
       } catch (error) {
         toast.error(error.message || 'Failed to delete expense');

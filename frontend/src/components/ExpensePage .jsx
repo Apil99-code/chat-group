@@ -24,7 +24,7 @@ const ExpensePage = () => {
     category: "Other",
     description: "",
     sharedWith: [],
-    date: new Date().toISOString().split("T")[0], // Add default date
+    date: new Date().toISOString().split("T")[0],
   });
 
   useEffect(() => {
@@ -41,12 +41,12 @@ const ExpensePage = () => {
     }
 
     try {
-      console.log("Submitting expense:", newExpense); // Log the expense data
-      await addExpense({
+      const expenseData = {
         ...newExpense,
         groupId: selectedGroup._id,
-        amount: parseFloat(newExpense.amount),
-      });
+        amount: parseFloat(newExpense.amount) || 0,
+      };
+      await addExpense(expenseData);
       setShowAddExpense(false);
       setNewExpense({
         title: "",
@@ -54,7 +54,7 @@ const ExpensePage = () => {
         category: "Other",
         description: "",
         sharedWith: [],
-        date: new Date().toISOString().split("T")[0], // Reset date
+        date: new Date().toISOString().split("T")[0],
       });
     } catch (error) {
       console.error("Failed to add expense:", error);
@@ -175,25 +175,27 @@ const ExpensePage = () => {
       {/* Expense List */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
-          {expenses.map((expense) => (
+          {expenses?.map((expense) => (
             <div
-              key={expense._id}
+              key={expense?._id}
               className="card bg-base-200 shadow-sm"
             >
               <div className="card-body">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-medium">{expense.title}</h3>
-                    <p className="text-sm text-base-content/70">{expense.category}</p>
-                    {expense.description && (
+                    <h3 className="font-medium">{expense?.title || 'Untitled'}</h3>
+                    <p className="text-sm text-base-content/70">{expense?.category || 'Uncategorized'}</p>
+                    {expense?.description && (
                       <p className="text-sm mt-2">{expense.description}</p>
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    <p className="text-lg font-semibold">${expense.amount.toFixed(2)}</p>
+                    <p className="text-lg font-semibold">
+                      ${(expense?.amount || 0).toFixed(2)}
+                    </p>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleDelete(expense._id)}
+                        onClick={() => handleDelete(expense?._id)}
                         className="btn btn-ghost btn-xs"
                       >
                         <Trash2 size={14} />
@@ -205,7 +207,7 @@ const ExpensePage = () => {
             </div>
           ))}
 
-          {expenses.length === 0 && (
+          {(!expenses || expenses.length === 0) && (
             <div className="text-center text-base-content/70 py-8">
               No expenses found. Add one to get started!
             </div>

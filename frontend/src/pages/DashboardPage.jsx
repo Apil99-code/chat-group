@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useGroupStore } from '../store/useGroupStore';
 import { useExpenseStore } from '../store/useExpenseStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useTripStore } from '../store/useTripStore';
 import { 
   MapPin, 
   Users, 
@@ -20,35 +21,16 @@ const DashboardPage = () => {
   const { groups, getGroups } = useGroupStore();
   const { expenses, getExpenses } = useExpenseStore();
   const { authUser } = useAuthStore();
-  const [upcomingTrips, setUpcomingTrips] = useState([]);
+  const { trips, getTrips } = useTripStore();
   const [recentActivity, setRecentActivity] = useState([]);
 
   useEffect(() => {
     getGroups();
     getExpenses();
-  }, [getGroups, getExpenses]);
+    getTrips();
+  }, [getGroups, getExpenses, getTrips]);
 
   useEffect(() => {
-    // Mock upcoming trips data (replace with actual data from your backend)
-    setUpcomingTrips([
-      {
-        id: 1,
-        name: 'Paris Adventure',
-        date: 'June 15-20, 2024',
-        members: 4,
-        destination: 'Paris, France',
-        image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
-      },
-      {
-        id: 2,
-        name: 'Tokyo Explorer',
-        date: 'July 10-15, 2024',
-        members: 3,
-        destination: 'Tokyo, Japan',
-        image: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'
-      }
-    ]);
-
     // Mock recent activity (replace with actual data from your backend)
     setRecentActivity([
       {
@@ -93,7 +75,7 @@ const DashboardPage = () => {
                 </div>
                 <div>
                   <h3 className="text-sm text-gray-600">Total Trips</h3>
-                  <p className="text-2xl font-bold">{upcomingTrips.length}</p>
+                  <p className="text-2xl font-bold">{trips.length}</p>
                 </div>
               </div>
             </div>
@@ -141,20 +123,20 @@ const DashboardPage = () => {
                   </Link>
                 </div>
                 <div className="space-y-4">
-                  {upcomingTrips.map((trip) => (
+                  {trips.map((trip) => (
                     <div key={trip.id} className="flex items-center gap-4 p-4 bg-base-200 rounded-lg">
                       <img
-                        src={trip.image}
+                        src={trip.image || 'default-image-url'}
                         alt={trip.name}
                         className="w-16 h-16 rounded-lg object-cover"
                       />
                       <div className="flex-1">
-                        <h3 className="font-semibold">{trip.name}</h3>
-                        <p className="text-sm text-gray-600">{trip.destination}</p>
+                        <h3 className="font-semibold">{trip.title}</h3>
+                        <p className="text-sm text-gray-600">{trip.location}</p>
                         <div className="flex items-center gap-4 mt-2">
                           <span className="text-sm flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            {trip.date}
+                            {trip.startDate} - {trip.endDate}
                           </span>
                           <span className="text-sm flex items-center gap-1">
                             <Users className="w-4 h-4" />

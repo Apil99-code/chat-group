@@ -7,6 +7,8 @@ export const useTripStore = create((set, get) => ({
   isTripsLoading: false,
   isTripSubmitting: false,
   selectedTrip: null,
+  showEditModal: false,
+  showShareModal: false,
 
   // Fetch all trips
   getTrips: async () => {
@@ -54,7 +56,7 @@ export const useTripStore = create((set, get) => ({
       toast.error(error.response?.data?.message || "Failed to update trip");
       throw error;
     } finally {
-      set({ isTripSubmitting: false });
+      set({ isTripSubmitting: false, showEditModal: false });
     }
   },
 
@@ -76,6 +78,27 @@ export const useTripStore = create((set, get) => ({
     }
   },
 
+  // Share trip
+  shareTrip: async (id, shareData) => {
+    set({ isTripSubmitting: true });
+    try {
+      const res = await axiosInstance.post(`/trips/${id}/share`, shareData);
+      set((state) => ({
+        trips: state.trips.map((trip) => 
+          trip._id === id ? res.data : trip
+        ),
+        selectedTrip: state.selectedTrip?._id === id ? res.data : state.selectedTrip
+      }));
+      toast.success("Trip shared successfully");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to share trip");
+      throw error;
+    } finally {
+      set({ isTripSubmitting: false, showShareModal: false });
+    }
+  },
+
   // Set selected trip
   setSelectedTrip: (trip) => {
     set({ selectedTrip: trip });
@@ -84,5 +107,15 @@ export const useTripStore = create((set, get) => ({
   // Clear selected trip
   clearSelectedTrip: () => {
     set({ selectedTrip: null });
+  },
+
+  // Toggle edit modal
+  toggleEditModal: (show) => {
+    set({ showEditModal: show });
+  },
+
+  // Toggle share modal
+  toggleShareModal: (show) => {
+    set({ showShareModal: show });
   }
 }));
