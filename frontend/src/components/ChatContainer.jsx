@@ -1,4 +1,5 @@
 import { useChatStore } from "../store/useChatStore";
+import { useGroupStore } from "../store/useGroupStore";
 import { useEffect, useRef } from "react";
 
 import ChatHeader from "./ChatHeader";
@@ -17,19 +18,36 @@ const ChatContainer = () => {
     unsubscribeFromMessages,
   } = useChatStore();
 
+  const {
+    groupMessages,
+    getGroupMessages,
+    isGroupMessagesLoading,
+    selectedGroup,
+    subscribeToGroupMessages,
+    unsubscribeFromGroupMessages,
+  } = useGroupStore();
+
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
 
   // Fetch messages and manage subscriptions
   useEffect(() => {
-    if (selectedUser?._id) {
+    if (selectedUser && selectedUser._id) {
       getMessages(selectedUser._id);
       subscribeToMessages();
     }
 
     return () => unsubscribeFromMessages();
-  }, [selectedUser?._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser?.id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+  
+  useEffect(() => {
+    if (selectedGroup && selectedGroup._id) {
+      getGroupMessages(selectedGroup._id);
+      subscribeToGroupMessages();
+    }
 
+    return () => unsubscribeFromGroupMessages();
+  }, [selectedGroup?.id, getGroupMessages, subscribeToGroupMessages, unsubscribeFromGroupMessages]);
   // Auto-scroll to the latest message
   useEffect(() => {
     if (messageEndRef.current) {
