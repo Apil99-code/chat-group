@@ -25,6 +25,15 @@ const tripSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    sharedWith: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    }],
+    sharedGroups: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Group"
+    }],
+    isPublic: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

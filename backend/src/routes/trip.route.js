@@ -4,7 +4,8 @@ import {
   createTrip, 
   getTrips, 
   updateTrip, 
-  deleteTrip 
+  deleteTrip,
+  shareTrip
 } from "../controllers/trip.controller.js";
 
 const router = express.Router();
@@ -23,5 +24,8 @@ router.put("/:id", updateTrip);
 
 // Delete a trip
 router.delete("/:id", deleteTrip);
+
+// Share trip with users or groups
+router.post("/:id/share", shareTrip);
 
 export default router;

@@ -17,7 +17,8 @@ export const createTrip = async (req, res) => {
       image,
       activities,
       accommodation,
-      transportation
+      transportation,
+      isPublic
     } = req.body;
 
     if (!title || !startDate || !endDate || !location || !coordinates || !members || !budget) {
@@ -44,6 +45,7 @@ export const createTrip = async (req, res) => {
       activities,
       accommodation,
       transportation,
+      isPublic,
       userId: req.user.id,
     });
 
@@ -56,7 +58,14 @@ export const createTrip = async (req, res) => {
 // Get all trips for a user
 export const getTrips = async (req, res) => {
   try {
-    const trips = await Trip.find({ userId: req.user.id }).sort({ startDate: 1 });
+    const trips = await Trip.find({
+      $or: [
+        { userId: req.user.id },
+        { sharedWith: req.user.id },
+        { sharedGroups: { $in: req.user.groups } },
+        { isPublic: true }
+      ]
+    }).sort({ startDate: 1 });
     res.status(200).json(trips);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch trips", error: error.message });
@@ -99,5 +108,35 @@ export const deleteTrip = async (req, res) => {
     res.status(200).json({ message: "Trip deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Failed to delete trip", error: error.message });
+  }
+};
+
+// Share trip with users or groups
+export const shareTrip = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { sharedWith, sharedGroups, isPublic } = req.body;
+
+    const trip = await Trip.findOne({ _id: id, userId: req.user.id });
+
+    if (!trip) {
+      return res.status(404).json({ message: "Trip not found" });
+    }
+
+    const updatedTrip = await Trip.findByIdAndUpdate(
+      id,
+      {
+        $set: { isPublic },
+        $addToSet: {
+          sharedWith: { $each: sharedWith || [] },
+          sharedGroups: { $each: sharedGroups || [] }
+        }
+      },
+      { new: true }
+    );
+
+    res.status(200).json(updatedTrip);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to share trip", error: error.message });
   }
 };
