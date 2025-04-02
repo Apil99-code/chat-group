@@ -2,14 +2,13 @@ import mongoose from "mongoose";
 
 const expenseSchema = new mongoose.Schema(
   {
-    userId: {
+    groupId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Group",
       required: true,
     },
-    category: {
+    title: {
       type: String,
-      enum: ["Accommodation", "Transportation", "Food", "Activities", "Other"],
       required: true,
     },
     amount: {
@@ -17,33 +16,31 @@ const expenseSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    category: {
+      type: String,
+      required: true,
+    },
     description: {
       type: String,
-      trim: true,
     },
     date: {
       type: Date,
-      default: Date.now,
-    },
-    groupId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Group",
-      required: true,
+      default: Date.now, // Set default date
     },
     sharedWith: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        amount: {
+          type: Number,
+          min: 0,
+        },
       },
     ],
-    isSettled: {
-      type: Boolean,
-      default: false,
-    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 const Expense = mongoose.model("Expense", expenseSchema);

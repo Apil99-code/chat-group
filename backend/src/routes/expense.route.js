@@ -10,15 +10,22 @@ import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
+// All routes are protected
+router.use(protectRoute);
 
-router.get("/", protectRoute, getExpenses);
+// Create a new expense
+router.post("/", createExpense);
 
-router.get("/:id", protectRoute, getExpenseById);
+// Get all expenses for a user
+router.get("/", getExpenses);
 
-router.post("/", protectRoute, createExpense);
+// Get a specific expense by ID
+router.get("/:id", getExpenseById);
 
-router.put("/:id", protectRoute, updateExpense);
+// Update an expense
+router.put("/:id", updateExpense);
 
-router.delete("/:id", protectRoute, deleteExpense);
+// Delete an expense
+router.delete("/:id", deleteExpense);
 
 export default router;
