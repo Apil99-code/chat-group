@@ -27,6 +27,11 @@ const expenseSchema = new mongoose.Schema(
       type: Date,
       default: Date.now, // Set default date
     },
+    tripId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Trip",
+      required: false, // Optional for expenses not linked to trips
+    },
     sharedWith: [
       {
         userId: {

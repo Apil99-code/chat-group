@@ -5,7 +5,8 @@ import {
   getTrips, 
   updateTrip, 
   deleteTrip,
-  shareTrip
+  shareTrip,
+  markTripAsCompleted
 } from "../controllers/trip.controller.js";
 
 const router = express.Router();
@@ -27,5 +28,8 @@ router.delete("/:id", deleteTrip);
 
 // Share trip with users or groups
 router.post("/:id/share", shareTrip);
+
+// Mark a trip as completed
+router.put("/:id/complete", markTripAsCompleted);
 
 export default router;

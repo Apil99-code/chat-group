@@ -5,6 +5,7 @@ import {
   getExpenseById,
   updateExpense,
   deleteExpense,
+  splitExpense,
 } from "../controllers/expense.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
@@ -24,6 +25,9 @@ router.get("/:id", getExpenseById);
 
 // Update an expense
 router.put("/:id", updateExpense);
+
+// Split an expense
+router.put("/:id/split", splitExpense);
 
 // Delete an expense
 router.delete("/:id", deleteExpense);

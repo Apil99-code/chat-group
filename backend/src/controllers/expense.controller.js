@@ -1,10 +1,11 @@
 import Expense from "../models/expense.model.js";
 import Group from "../models/group.model.js";
+import Trip from "../models/trip.model.js";
 
 // Create a new expense
 export const createExpense = async (req, res) => {
   try {
-    const { title, amount, category, description, groupId, sharedWith, date } = req.body;
+    const { title, amount, category, description, groupId, sharedWith, date, tripId } = req.body;
 
     // Validate required fields
     if (!title || !amount || !category || !groupId || !date) {
@@ -40,6 +41,7 @@ export const createExpense = async (req, res) => {
       groupId,
       sharedWith: sharedWith || [],
       date: date || Date.now(), // Use provided date or default to now
+      tripId,
     });
 
     await newExpense.save();
@@ -48,6 +50,16 @@ export const createExpense = async (req, res) => {
       "groupId",
       "name"
     );
+
+    if (newExpense.tripId) {
+      const trip = await Trip.findById(newExpense.tripId);
+      if (trip?.chatGroupId) {
+        // Notify the chat group about the new expense
+        await Group.findByIdAndUpdate(trip.chatGroupId, {
+          $push: { messages: { text: `New expense added: ${title} - $${amount}`, sender: req.user._id } }
+        });
+      }
+    }
 
     res.status(201).json({
       message: "Expense created successfully",
@@ -220,5 +232,30 @@ export const deleteExpense = async (req, res) => {
       message: "Internal Server Error",
       error: error.message 
     });
+  }
+};
+
+// Split an expense
+export const splitExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { sharedWith } = req.body;
+
+    const expense = await Expense.findById(id);
+    if (!expense) {
+      return res.status(404).json({ message: "Expense not found" });
+    }
+
+    const totalSharedAmount = sharedWith.reduce((sum, share) => sum + share.amount, 0);
+    if (totalSharedAmount > expense.amount) {
+      return res.status(400).json({ message: "Shared amount exceeds total expense" });
+    }
+
+    expense.sharedWith = sharedWith;
+    await expense.save();
+
+    res.status(200).json(expense);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to split expense", error: error.message });
   }
 };

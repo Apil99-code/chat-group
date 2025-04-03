@@ -138,3 +138,42 @@ export const getGroupMessages = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const assignRole = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { userId, role } = req.body;
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    const member = group.members.find((member) => member.userId.toString() === userId);
+    if (!member) {
+      return res.status(404).json({ message: "User not found in group" });
+    }
+
+    member.role = role;
+    await group.save();
+
+    res.status(200).json(group);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to assign role", error: error.message });
+  }
+};
+
+export const getGroupActivityLog = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    const group = await Group.findById(groupId).populate("activityLog.userId", "username");
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    res.status(200).json(group.activityLog);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch activity log", error: error.message });
+  }
+};
