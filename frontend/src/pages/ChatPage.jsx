@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
-import { MessageSquare, Users, Search, Plus, Send, Image, Paperclip, MapPin } from 'lucide-react';
+import { useTripStore } from '../store/useTripStore';
+import { MessageSquare, Users, Search, Plus, Send, Image, Paperclip, MapPin, Plane } from 'lucide-react';
+import CreateTripFromChatModal from '../components/CreateTripFromChatModal';
 
 const ChatPage = () => {
   const { authUser } = useAuthStore();
+  const { setSelectedChatGroup } = useTripStore();
   const [activeChat, setActiveChat] = useState(null);
   const [message, setMessage] = useState('');
   
@@ -31,6 +34,10 @@ const ChatPage = () => {
     }
   ]);
 
+  const handleCreateTrip = (chat) => {
+    setSelectedChatGroup(chat);
+  };
+
   return (
     <div className="min-h-screen bg-base-200 pt-16">
       <div className="container mx-auto px-4 py-8">
@@ -52,37 +59,53 @@ const ChatPage = () => {
                     placeholder="Search chats..."
                     className="input input-bordered w-full pl-10"
                   />
-                  <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                  <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 </div>
 
-                <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
+                <div className="space-y-2">
                   {chats.map((chat) => (
                     <div
                       key={chat.id}
-                      onClick={() => setActiveChat(chat)}
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-base-200 transition-colors ${
+                      className={`flex items-center p-3 rounded-lg cursor-pointer hover:bg-base-200 ${
                         activeChat?.id === chat.id ? 'bg-base-200' : ''
                       }`}
+                      onClick={() => setActiveChat(chat)}
                     >
                       <div className="relative">
                         <img
                           src={chat.image}
                           alt={chat.name}
-                          className="w-12 h-12 rounded-full object-cover"
+                          className="w-12 h-12 rounded-full"
                         />
+                        {chat.type === 'group' && (
+                          <div className="absolute -bottom-1 -right-1 bg-primary text-primary-content rounded-full p-1">
+                            <Users className="w-3 h-3" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="ml-3 flex-1">
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-semibold">{chat.name}</h3>
+                          <span className="text-sm text-gray-500">{chat.timestamp}</span>
+                        </div>
+                        <p className="text-sm text-gray-500 truncate">{chat.lastMessage}</p>
                         {chat.unread > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-primary text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
+                          <span className="badge badge-primary badge-sm mt-1">
                             {chat.unread}
                           </span>
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-semibold truncate">{chat.name}</h3>
-                          <span className="text-xs text-gray-500">{chat.timestamp}</span>
-                        </div>
-                        <p className="text-sm text-gray-600 truncate">{chat.lastMessage}</p>
-                      </div>
+                      {chat.type === 'group' && (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateTrip(chat);
+                          }}
+                        >
+                          <Plane className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -90,79 +113,69 @@ const ChatPage = () => {
             </div>
           </div>
 
-          {/* Chat Window */}
+          {/* Chat Messages */}
           <div className="md:col-span-3">
             {activeChat ? (
-              <div className="card bg-base-100 shadow-xl">
-                {/* Chat Header */}
-                <div className="card-body p-4 border-b">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
+              <div className="card bg-base-100 shadow-xl h-[calc(100vh-8rem)]">
+                <div className="card-body p-4 flex flex-col">
+                  {/* Chat Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
                       <img
                         src={activeChat.image}
                         alt={activeChat.name}
-                        className="w-10 h-10 rounded-full object-cover"
+                        className="w-10 h-10 rounded-full"
                       />
-                      <div>
-                        <h3 className="font-bold">{activeChat.name}</h3>
+                      <div className="ml-3">
+                        <h3 className="font-semibold">{activeChat.name}</h3>
                         <p className="text-sm text-gray-500">
                           {activeChat.members.join(', ')}
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button className="btn btn-ghost btn-sm">
-                        <Users className="w-4 h-4" />
-                      </button>
-                      <button className="btn btn-ghost btn-sm">
-                        <MapPin className="w-4 h-4" />
-                      </button>
-                    </div>
                   </div>
-                </div>
 
-                {/* Chat Messages */}
-                <div className="p-4 min-h-[400px] max-h-[calc(100vh-400px)] overflow-y-auto">
-                  {/* Messages will go here */}
-                  <div className="text-center text-gray-500 text-sm">
-                    No messages yet
+                  {/* Messages */}
+                  <div className="flex-1 overflow-y-auto mb-4">
+                    {/* Add your messages here */}
                   </div>
-                </div>
 
-                {/* Message Input */}
-                <div className="card-body p-4 border-t">
-                  <div className="flex items-center gap-2">
+                  {/* Message Input */}
+                  <div className="flex items-center space-x-2">
                     <button className="btn btn-ghost btn-sm">
-                      <Image className="w-4 h-4" />
+                      <Image className="w-5 h-5" />
                     </button>
                     <button className="btn btn-ghost btn-sm">
-                      <Paperclip className="w-4 h-4" />
+                      <Paperclip className="w-5 h-5" />
                     </button>
                     <input
                       type="text"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
                       placeholder="Type a message..."
                       className="input input-bordered flex-1"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
                     />
-                    <button className="btn btn-primary btn-sm">
-                      <Send className="w-4 h-4" />
+                    <button className="btn btn-primary">
+                      <Send className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="card bg-base-100 shadow-xl">
-                <div className="card-body flex items-center justify-center min-h-[400px]">
-                  <MessageSquare className="w-16 h-16 text-gray-300" />
-                  <h3 className="text-xl font-bold mt-4">Select a chat to start messaging</h3>
-                  <p className="text-gray-500">Choose from your existing chats or create a new one</p>
+              <div className="card bg-base-100 shadow-xl h-[calc(100vh-8rem)]">
+                <div className="card-body flex items-center justify-center">
+                  <div className="text-center">
+                    <MessageSquare className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-xl font-semibold">Select a chat to start messaging</h3>
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      <CreateTripFromChatModal />
     </div>
   );
 };

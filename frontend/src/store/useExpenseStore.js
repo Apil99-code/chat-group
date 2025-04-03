@@ -82,6 +82,24 @@ export const useExpenseStore = create((set, get) => ({
     }
   },
 
+  // Split Expense
+  splitExpense: async (expenseId, sharedWith) => {
+    set({ isExpenseSubmitting: true });
+    try {
+      const res = await axiosInstance.put(`/expense/${expenseId}/split`, { sharedWith });
+      set((state) => ({
+        expenses: state.expenses.map((expense) =>
+          expense._id === expenseId ? res.data : expense
+        ),
+      }));
+      toast.success("Expense split successfully");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to split expense");
+    } finally {
+      set({ isExpenseSubmitting: false });
+    }
+  },
+
   // Set Selected Expense
   setSelectedExpense: (expense) => set({ selectedExpense: expense }),
 

@@ -124,7 +124,7 @@ const DashboardPage = () => {
                 </div>
                 <div className="space-y-4">
                   {trips.map((trip) => (
-                    <div key={trip.id} className="flex items-center gap-4 p-4 bg-base-200 rounded-lg">
+                    <div key={trip._id} className="flex items-center gap-4 p-4 bg-base-200 rounded-lg">
                       <img
                         src={trip.image || 'default-image-url'}
                         alt={trip.name}
@@ -157,8 +157,8 @@ const DashboardPage = () => {
               <div className="card-body">
                 <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
                 <div className="space-y-4">
-                  {recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-start gap-3">
+                  {recentActivity.map((activity, index) => (
+                    <div key={activity.id || index} className="flex items-start gap-3">
                       <div className="bg-primary/10 p-2 rounded-lg">
                         {activity.type === 'message' && <MessageSquare className="w-5 h-5 text-primary" />}
                         {activity.type === 'expense' && <Receipt className="w-5 h-5 text-primary" />}

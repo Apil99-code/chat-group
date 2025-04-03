@@ -19,7 +19,9 @@ import {
   Utensils,
   Trash2,
   Share2,
-  Edit2
+  Edit2,
+  Receipt,
+  User
 } from 'lucide-react';
 import { useTripStore } from '../store/useTripStore';
 import { useChatStore } from '../store/useChatStore';
@@ -55,6 +57,7 @@ const TripPage = () => {
 
   const { currentUser } = useChatStore();
   const { groups } = useGroupStore();
+  
 
   const [showNewTripModal, setShowNewTripModal] = useState(false);
   const [mapCenter, setMapCenter] = useState([20, 0]);
@@ -85,9 +88,21 @@ const TripPage = () => {
     isPublic: false
   });
 
+  const [activeTab, setActiveTab] = useState('all');
+
   useEffect(() => {
     getTrips();
   }, [getTrips]);
+
+  useEffect(() => {
+    if (selectedTrip) {
+      setShareForm({
+        sharedWith: selectedTrip.sharedWith || [],
+        sharedGroups: selectedTrip.sharedGroups || [],
+        isPublic: selectedTrip.isPublic || false,
+      });
+    }
+  }, [selectedTrip]);
 
   const handleTripSelect = (trip) => {
     setSelectedTrip(trip);
@@ -142,7 +157,11 @@ const TripPage = () => {
   const handleCreateTrip = async (e) => {
     e.preventDefault();
     try {
-      await createTrip(newTripForm);
+      const tripData = {
+        ...newTripForm,
+        members: Array.isArray(newTripForm.members) ? newTripForm.members : [newTripForm.members],
+      };
+      await createTrip(tripData);
       setShowNewTripModal(false);
       setNewTripForm({
         title: '',
@@ -150,7 +169,7 @@ const TripPage = () => {
         endDate: '',
         location: '',
         coordinates: [0, 0],
-        members: 1,
+        members: 1, // Reset to default
         budget: 0,
         status: 'planning',
         description: '',
@@ -158,7 +177,7 @@ const TripPage = () => {
         activities: [],
         accommodation: '',
         transportation: '',
-        isPublic: false
+        isPublic: false,
       });
     } catch (error) {
       console.error('Failed to create trip:', error);
@@ -198,17 +217,11 @@ const TripPage = () => {
     }
   };
 
-  const handleShareTrip = async (e) => {
-    e.preventDefault();
+  const handleShareTrip = async (tripId, shareData) => {
     try {
-      await shareTrip(selectedTrip._id, shareForm);
-      setShareForm({
-        sharedWith: [],
-        sharedGroups: [],
-        isPublic: false
-      });
+      await shareTrip(tripId, shareData);
     } catch (error) {
-      console.error('Failed to share trip:', error);
+      console.error("Failed to share trip:", error);
     }
   };
 
@@ -432,6 +445,38 @@ const TripPage = () => {
                       <div className="stat-title">Budget</div>
                       <div className="stat-value text-lg">${selectedTrip.budget}</div>
                     </div>
+
+                    <div className="stat bg-base-200 rounded-lg p-4">
+                      <div className="stat-figure text-primary">
+                        <Receipt className="w-8 h-8" />
+                      </div>
+                      <div className="stat-title">Total Expenses</div>
+                      <div className="stat-value text-lg">
+                        ${(selectedTrip?.expenses?.reduce((sum, expense) => sum + expense.amount, 0) || 0).toFixed(2)}
+                      </div>
+                    </div>
+
+                    <div className="stat bg-base-200 rounded-lg p-4">
+                      <div className="stat-figure text-primary">
+                        <Users className="w-8 h-8" />
+                      </div>
+                      <div className="stat-title">Group Expenses</div>
+                      <div className="stat-value text-lg">
+                        ${(selectedTrip?.expenses?.filter(expense => expense.isGroupExpense)
+                          .reduce((sum, expense) => sum + expense.amount, 0) || 0).toFixed(2)}
+                      </div>
+                    </div>
+
+                    <div className="stat bg-base-200 rounded-lg p-4">
+                      <div className="stat-figure text-primary">
+                        <User className="w-8 h-8" />
+                      </div>
+                      <div className="stat-title">Personal Expenses</div>
+                      <div className="stat-value text-lg">
+                        ${(selectedTrip?.expenses?.filter(expense => !expense.isGroupExpense && expense.createdBy === currentUser._id)
+                          .reduce((sum, expense) => sum + expense.amount, 0) || 0).toFixed(2)}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Trip Details */}
@@ -465,6 +510,52 @@ const TripPage = () => {
                           ))}
                         </ul>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Trip Expenses */}
+                  <div className="mt-8">
+                    <h3 className="text-xl font-bold mb-4">Expenses</h3>
+                    <div className="tabs tabs-boxed mb-4">
+                      <a className={`tab ${activeTab === 'all' ? 'tab-active' : ''}`} onClick={() => setActiveTab('all')}>
+                        All
+                      </a>
+                      <a className={`tab ${activeTab === 'group' ? 'tab-active' : ''}`} onClick={() => setActiveTab('group')}>
+                        Group
+                      </a>
+                      <a className={`tab ${activeTab === 'personal' ? 'tab-active' : ''}`} onClick={() => setActiveTab('personal')}>
+                        Personal
+                      </a>
+                    </div>
+
+                    <div className="space-y-4">
+                      {selectedTrip?.expenses
+                        ?.filter(expense => {
+                          if (activeTab === 'all') return true;
+                          if (activeTab === 'group') return expense.isGroupExpense;
+                          if (activeTab === 'personal') return !expense.isGroupExpense && expense.createdBy === currentUser._id;
+                          return true;
+                        })
+                        .map((expense) => (
+                          <div key={expense._id} className="card bg-base-200">
+                            <div className="card-body">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h4 className="font-semibold">{expense.description}</h4>
+                                  <p className="text-sm text-gray-500">
+                                    {expense.isGroupExpense ? 'Group Expense' : 'Personal Expense'}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-bold">${expense.amount.toFixed(2)}</p>
+                                  <p className="text-sm text-gray-500">
+                                    {new Date(expense.date).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                     </div>
                   </div>
 
@@ -622,7 +713,7 @@ const TripPage = () => {
                   value={newTripForm.accommodation}
                   onChange={(e) => setNewTripForm({ ...newTripForm, accommodation: e.target.value })}
                 />
-            </div>
+              </div>
 
               <div className="form-control">
                 <label className="label">Image URL</label>
@@ -834,7 +925,10 @@ const TripPage = () => {
               ✕
             </button>
             
-            <form onSubmit={handleShareTrip} className="space-y-4 mt-4">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleShareTrip(selectedTrip._id, shareForm);
+            }} className="space-y-4 mt-4">
               <div className="form-control">
                 <label className="label">
                   <span className="label-text">Share with Users</span>
@@ -848,7 +942,7 @@ const TripPage = () => {
                     sharedWith: Array.from(e.target.selectedOptions, option => option.value)
                   })}
                 >
-                  {currentUser?.friends?.map(friend => (
+                  {currentUser?.friend?.map(friend => (
                     <option key={friend._id} value={friend._id}>
                       {friend.name}
                     </option>
@@ -899,7 +993,10 @@ const TripPage = () => {
               </button>
               <button
                 type="submit"
-                onClick={handleShareTrip}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleShareTrip(selectedTrip._id, shareForm);
+                }}
                 className="btn btn-primary"
                 disabled={isTripSubmitting}
               >

@@ -9,6 +9,8 @@ export const useTripStore = create((set, get) => ({
   selectedTrip: null,
   showEditModal: false,
   showShareModal: false,
+  showCreateFromChatModal: false,
+  selectedChatGroup: null,
 
   // Fetch all trips
   getTrips: async () => {
@@ -21,6 +23,74 @@ export const useTripStore = create((set, get) => ({
     } finally {
       set({ isTripsLoading: false });
     }
+  },
+
+  // Create a trip from chat
+  createTripFromChat: async (tripData) => {
+    set({ isTripSubmitting: true });
+    try {
+      const res = await axiosInstance.post("/trips/from-chat", tripData);
+      set((state) => ({ 
+        trips: [...state.trips, res.data],
+        showCreateFromChatModal: false,
+        selectedChatGroup: null
+      }));
+      toast.success("Trip created successfully");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to create trip");
+      throw error;
+    } finally {
+      set({ isTripSubmitting: false });
+    }
+  },
+
+  // Update trip members
+  updateTripMembers: async (tripId, members) => {
+    set({ isTripSubmitting: true });
+    try {
+      const res = await axiosInstance.put(`/trips/${tripId}/members`, { members });
+      set((state) => ({
+        trips: state.trips.map((trip) => 
+          trip._id === tripId ? res.data : trip
+        ),
+        selectedTrip: state.selectedTrip?._id === tripId ? res.data : state.selectedTrip
+      }));
+      toast.success("Trip members updated successfully");
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update trip members");
+      throw error;
+    } finally {
+      set({ isTripSubmitting: false });
+    }
+  },
+
+  // Get trip expenses (both group and personal)
+  getTripExpenses: async (tripId) => {
+    try {
+      const res = await axiosInstance.get(`/trips/${tripId}/expenses`);
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to fetch trip expenses");
+      throw error;
+    }
+  },
+
+  // Set selected chat group for trip creation
+  setSelectedChatGroup: (chatGroup) => {
+    set({ 
+      selectedChatGroup: chatGroup,
+      showCreateFromChatModal: true
+    });
+  },
+
+  // Close create from chat modal
+  closeCreateFromChatModal: () => {
+    set({ 
+      showCreateFromChatModal: false,
+      selectedChatGroup: null
+    });
   },
 
   // Create a new trip
@@ -80,23 +150,45 @@ export const useTripStore = create((set, get) => ({
 
   // Share trip
   shareTrip: async (id, shareData) => {
-    set({ isTripSubmitting: true });
     try {
       const res = await axiosInstance.post(`/trips/${id}/share`, shareData);
       set((state) => ({
-        trips: state.trips.map((trip) => 
-          trip._id === id ? res.data : trip
+        trips: state.trips.map((trip) =>
+          trip._id === id ? { ...trip, ...res.data } : trip
         ),
-        selectedTrip: state.selectedTrip?._id === id ? res.data : state.selectedTrip
       }));
       toast.success("Trip shared successfully");
       return res.data;
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to share trip");
       throw error;
-    } finally {
-      set({ isTripSubmitting: false, showShareModal: false });
     }
+  },
+
+  // Mark trip as completed
+  markTripAsCompleted: async (id) => {
+    set({ isTripSubmitting: true });
+    try {
+      const res = await axiosInstance.put(`/trips/${id}/complete`);
+      set((state) => ({
+        trips: state.trips.map((trip) =>
+          trip._id === id ? res.data : trip
+        ),
+      }));
+      toast.success("Trip marked as completed");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to mark trip as completed");
+    } finally {
+      set({ isTripSubmitting: false });
+    }
+  },
+
+  // Get trip analytics
+  getTripAnalytics: () => {
+    const trips = get().trips;
+    const totalBudget = trips.reduce((sum, trip) => sum + trip.budget, 0);
+    const completedTrips = trips.filter((trip) => trip.status === "completed").length;
+    return { totalBudget, completedTrips };
   },
 
   // Set selected trip

@@ -121,5 +121,29 @@ export const useGroupStore = create((set, get) => ({
       }
     }
     set({ selectedGroup });
-  }
+  },
+
+  assignRole: async (groupId, userId, role) => {
+    try {
+      const res = await axiosInstance.put(`/groups/${groupId}/roles`, { userId, role });
+      set((state) => ({
+        groups: state.groups.map((group) =>
+          group._id === groupId ? res.data : group
+        ),
+      }));
+      toast.success("Role assigned successfully");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to assign role");
+    }
+  },
+
+  getGroupActivityLog: async (groupId) => {
+    try {
+      const res = await axiosInstance.get(`/groups/${groupId}/activity-log`);
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to fetch activity log");
+      throw error;
+    }
+  },
 }));

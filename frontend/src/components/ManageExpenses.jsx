@@ -1,12 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useExpenseStore } from '../store/useExpenseStore';
 import { useGroupStore } from '../store/useGroupStore';
+import { useTripStore } from "../store/useTripStore";
 import { Plus, Pencil, Trash2, Receipt, Users, User } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import axios from "axios";
 
 const ManageExpenses = () => {
+  // Configure axios inline
+  const axiosInstance = axios.create({
+    baseURL: "http://localhost:5000/api", // Ensure this matches your backend server URL
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  // Add a request interceptor to include the token in headers
+  axiosInstance.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
   const { expenses, getExpenses, addExpense, updateExpense, deleteExpense, isExpensesLoading } = useExpenseStore();
   const { selectedGroup } = useGroupStore();
+  const { trips } = useTripStore(); // Fetch trips for the dropdown
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [formData, setFormData] = useState({
@@ -15,12 +38,16 @@ const ManageExpenses = () => {
     category: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
-    sharedWith: []
+    sharedWith: [],
+    tripId: ''
   });
 
   useEffect(() => {
     if (selectedGroup?._id) {
-      getExpenses(selectedGroup._id);
+      console.log('Fetching expenses for group:', selectedGroup._id); // Debug log
+      getExpenses(selectedGroup._id).catch((error) => {
+        console.error('Error fetching expenses:', error.message); // Log API errors
+      });
     }
   }, [selectedGroup?._id, getExpenses]);
 
@@ -44,7 +71,15 @@ const ManageExpenses = () => {
         toast.success("Expense updated successfully");
       } else {
         await addExpense(expenseData);
-        toast.success("Expense added successfully");
+        if (formData.tripId) {
+          toast.success("Expense added and shared in the trip chat!");
+          // Share expense details in the chat group
+          await axiosInstance.post(`/chat/${formData.tripId}/message`, {
+            text: `New expense added: ${formData.title} - $${formData.amount}`,
+          });
+        } else {
+          toast.success("Expense added successfully");
+        }
       }
       
       // Refresh the expenses list
@@ -59,8 +94,10 @@ const ManageExpenses = () => {
         description: "",
         date: new Date().toISOString().split("T")[0],
         sharedWith: [],
+        tripId: ''
       });
     } catch (error) {
+      console.error('Error saving expense:', error.message); // Log errors
       toast.error(error.message || "Failed to save expense");
     }
   };
@@ -73,7 +110,8 @@ const ManageExpenses = () => {
       category: expense.category,
       description: expense.description || '',
       date: new Date(expense.date).toISOString().split('T')[0],
-      sharedWith: expense.sharedWith || []
+      sharedWith: expense.sharedWith || [],
+      tripId: expense.tripId || ''
     });
     setIsModalOpen(true);
   };
@@ -86,6 +124,7 @@ const ManageExpenses = () => {
         await getExpenses(selectedGroup._id);
         toast.success('Expense deleted successfully');
       } catch (error) {
+        console.error('Error deleting expense:', error.message); // Log errors
         toast.error(error.message || 'Failed to delete expense');
       }
     }
@@ -108,6 +147,10 @@ const ManageExpenses = () => {
     );
   }
 
+  if (!selectedGroup?._id) {
+    return <div>Please select a group to view expenses.</div>; // Handle missing group
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 mt-16">
       <div className="flex justify-between items-center mb-6">
@@ -121,7 +164,8 @@ const ManageExpenses = () => {
               category: '',
               description: '',
               date: new Date().toISOString().split('T')[0],
-              sharedWith: []
+              sharedWith: [],
+              tripId: ''
             });
             setIsModalOpen(true);
           }}
@@ -247,6 +291,23 @@ const ManageExpenses = () => {
                   className="input input-bordered w-full"
                   required
                 />
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">Trip</span>
+                </label>
+                <select
+                  value={formData.tripId}
+                  onChange={(e) => setFormData({ ...formData, tripId: e.target.value })}
+                  className="select select-bordered w-full"
+                >
+                  <option value="">Select a trip</option>
+                  {trips.map((trip) => (
+                    <option key={trip._id} value={trip._id}>
+                      {trip.title}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex justify-end gap-2 mt-6">
                 <button
