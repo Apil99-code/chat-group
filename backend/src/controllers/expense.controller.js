@@ -1,6 +1,6 @@
 import Expense from "../models/expense.model.js";
 import Group from "../models/group.model.js";
-import Trip from "../models/trip.model.js";
+import { Trip } from "../models/trip.model.js";
 
 // Create a new expense
 export const createExpense = async (req, res) => {

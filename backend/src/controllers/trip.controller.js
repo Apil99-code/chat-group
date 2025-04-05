@@ -1,6 +1,6 @@
-import { Trip } from "../models/trip.model.js";
-import { Group } from "../models/group.model.js";
-import { User } from "../models/user.model.js";
+import { Trip } from "../models/trip.model.js"; // If Trip is a named export
+import Group from "../models/group.model.js"; // If Group is a default export
+import User from "../models/user.model.js"; // If User is a default export
 
 // Create a new trip
 export const createTrip = async (req, res) => {
