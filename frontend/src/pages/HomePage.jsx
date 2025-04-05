@@ -5,6 +5,7 @@ import NoChatSelected from "../components/NoChatSelected";
 import ChatContainer from "../components/ChatContainer";
 import GroupChatContainer from "../components/GroupChatContainer";
 import Expense from "../components/ExpensePage ";
+import SharedTrips from "../components/SharedTrips";
 
 const HomePage = () => {
   const { selectedUser } = useChatStore();
@@ -30,7 +31,12 @@ const HomePage = () => {
 
               {(selectedUser || selectedGroup) && (
                 <div className="w-[30%] border-l border-black overflow-y-auto">
-                  <Expense />
+                  <div className="h-1/2 overflow-y-auto border-b border-black">
+                    <Expense />
+                  </div>
+                  <div className="h-1/2 overflow-y-auto">
+                    <SharedTrips />
+                  </div>
                 </div>
               )}
             </div>

@@ -8,7 +8,6 @@ import ProfilePage from "./pages/ProfilePage";
 import DashboardPage from "./pages/DashboardPage";
 import TripPage from "./pages/TripPage";
 import ExpensePage from "./pages/ExpensePage";
-import ExpenseStatisticsPage from "./pages/ExpenseStatisticsPage";
 import ChatPage from "./pages/ChatPage";
 import ChatGroupsPage from "./pages/ChatGroupsPage";
 
@@ -57,7 +56,6 @@ const App = () => {
         <Route path="/trip" element={authUser ? <TripPage /> : <Navigate to="/login" />} />
         <Route path="/expense" element={authUser ? <ExpensePage /> : <Navigate to="/login" />} />
         <Route path="/homepage" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
-        <Route path="/statistics" element={authUser ? <ExpenseStatisticsPage /> : <Navigate to="/login" />} />
         <Route path="/chat" element={authUser ? <ChatPage /> : <Navigate to="/login" />} />
         <Route path="/chat/groups" element={authUser ? <ChatGroupsPage /> : <Navigate to="/login" />} />
         <Route path="*" element={<div>404 - Page Not Found</div>} />

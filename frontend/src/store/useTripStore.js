@@ -209,5 +209,26 @@ export const useTripStore = create((set, get) => ({
   // Toggle share modal
   toggleShareModal: (show) => {
     set({ showShareModal: show });
-  }
+  },
+
+  // Join a trip
+  joinTrip: async (tripId) => {
+    set({ isTripSubmitting: true });
+    try {
+      const res = await axiosInstance.post(`/trips/${tripId}/join`);
+      set((state) => ({
+        trips: state.trips.map((trip) =>
+          trip._id === tripId ? res.data : trip
+        ),
+      }));
+      toast.success("Successfully joined the trip");
+      return res.data;
+    } catch (error) {
+      console.error("Join trip error:", error);
+      toast.error(error.response?.data?.message || "Failed to join trip");
+      throw error;
+    } finally {
+      set({ isTripSubmitting: false });
+    }
+  },
 }));
